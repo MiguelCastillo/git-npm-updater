@@ -7,7 +7,7 @@
     "git-npm-updater": "./bin/cli.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "eslint index.js"
   },
   "repository": {
     "type": "git",
@@ -22,5 +22,8 @@
   "dependencies": {
     "github-api": "^2.3.0",
     "json-format": "^0.1.2"
+  },
+  "devDependencies": {
+    "eslint": "^3.2.0"
   }
 }
