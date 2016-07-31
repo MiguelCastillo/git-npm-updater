@@ -60,7 +60,7 @@ function updateNpmPackage(context) {
 
 
 function writeNpmPackage(context) {
-  var configContent = jsonFormat(context.updates, jsonFormatConfig)
+  var configContent = jsonFormat(context.updates, jsonFormatConfig);
   fs.writeFileSync(context.file, configContent);
   return context;
 }
