@@ -51,7 +51,7 @@ $ git-npm-update bit-loader-text bit-loader-css --username rollingstones --passw
 # install
 
 ```
-$ npm install git-npm-updater
+$ npm install git-npm-updater -g
 ```
 
 
