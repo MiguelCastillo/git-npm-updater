@@ -12,13 +12,12 @@ var jsonFormatConfig = {
 };
 
 
-function configure(directory) {
-  directory = path.resolve(directory);
+function configure(options) {
+  options.directory = path.resolve(options.directory);
 
   return Object.assign({
-    directory: directory,
-    file: directory + "/package.json"
-  }, defaults);
+    file: options.directory + "/package.json"
+  }, defaults, options);
 }
 
 
@@ -207,7 +206,8 @@ function createPullRequest(context) {
       head: context.branch
     })
     .then(function(result) {
-      console.log(result);
+      console.log("Pull Request created in", context.directory);
+      context.result = result;
       return context;
     });
 }
@@ -265,12 +265,19 @@ function execCommand(name, args, options) {
 }
 
 
-module.exports = function exec(directories) {
+module.exports = function exec(directories, options) {
+  var configs = directories.map(function(directory) {
+    return Object.assign({
+      directory: directory
+    }, options || {});
+  });
+
   return [ configure, checkGitStatus, updateNPM, makePR ]
     .reduce(function(deferred, action) {
       return deferred.then(function(results) {
         return Promise.all(results.filter(Boolean).map(action));
       });
 
-    }, Promise.all(directories));
+    }, Promise.all(configs));
 };
+
