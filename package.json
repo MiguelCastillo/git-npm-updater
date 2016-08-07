@@ -1,6 +1,6 @@
 {
   "name": "git-npm-updater",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Automatically create Pull Requests to update you outdated NPM dependencies",
   "main": "index.js",
   "bin": {
