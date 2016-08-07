@@ -1,7 +1,10 @@
+var defaults = require("./defaults");
 var spawn = require("child_process").spawn;
 var fs = require("fs");
 var path = require("path");
 var jsonFormat = require("json-format");
+var GitApi = require("github-api");
+
 
 var jsonFormatConfig = {
   type: "space",
@@ -9,16 +12,13 @@ var jsonFormatConfig = {
 };
 
 
-function resolveDirectory(directory) {
+function configure(directory) {
   directory = path.resolve(directory);
 
-  return {
+  return Object.assign({
     directory: directory,
-    file: directory + "/package.json",
-    branchName: "npm-dependencies-update",
-    commitMessage: "Updating npm dependencies",
-    remote: "origin"
-  };
+    file: directory + "/package.json"
+  }, defaults);
 }
 
 
@@ -66,6 +66,45 @@ function writeNpmPackage(context) {
 }
 
 
+function configureOrigin(context) {
+  console.log("Configuring origin for", context.directory);
+
+  return execCommand("git", ["remote", "--verbose"], { cwd: context.directory, env: process.env })
+    .then(function(result) {
+      var remoteInfo = result
+        .replace(/\t/gm, " ")
+        .split("\n")
+        .filter(Boolean)
+        .map(function(remote) {
+          return remote.split(" ");
+        })
+        .filter(function(remote) {
+          return remote[0] === context.remote && remote[2] === "(push)";
+        })
+        .map(function(remote) {
+          var info = /[/:]([^/:]+)[/]([^/]+)([.][\w]+)$/.exec(remote[1]);
+
+          return {
+            url: remote[1],
+            user: info[1],
+            repository: info[2]
+          };
+        });
+
+      Object.assign(context, remoteInfo[0]);
+
+      if (!context.username) {
+        context.username = context.user;
+      }
+
+      return context;
+    }, function(err) {
+      console.error("Unable to execute git remote on " + context.directory);
+      throw new Error(err);
+    });
+}
+
+
 function checkGitStatus(context) {
   console.log("Checking repository for pending changes to be staged and commited in", context.directory);
 
@@ -86,7 +125,7 @@ function checkGitStatus(context) {
 function createBranch(context) {
   console.log("Creating branch in", context.directory);
 
-  return execCommand("git", ["checkout", "-b", context.branchName], { cwd: context.directory, env: process.env })
+  return execCommand("git", ["checkout", "-b", context.branch], { cwd: context.directory, env: process.env })
     .then(function(status) {
       if (!status) {
         throw new Error("Unable to create branch. " + status);
@@ -121,7 +160,7 @@ function addFiles(context) {
 function commitChanges(context) {
   console.log("Committing staged files in", context.directory);
 
-  return execCommand("git", ["commit", "-m", context.commitMessage], { cwd: context.directory, env: process.env })
+  return execCommand("git", ["commit", "-m", context.message], { cwd: context.directory, env: process.env })
     .then(function(status) {
       if (!status) {
         throw new Error("Unable to commit files. " + status);
@@ -138,7 +177,7 @@ function commitChanges(context) {
 function pushBranch(context) {
   console.log("Push branch to remote in", context.directory);
 
-  return execCommand("git", ["push", context.remote, context.branchName], { cwd: context.directory, env: process.env })
+  return execCommand("git", ["push", context.remote, context.branch], { cwd: context.directory, env: process.env })
     .then(function(status) {
       if (status) {
         throw new Error("Unable to push branch. " + status);
@@ -152,19 +191,46 @@ function pushBranch(context) {
 }
 
 
-function makePR(context) {
-  // 1. git create branch
-  // 2. git add files
-  // 3. git commit
-  // 4. git push
-  // 5. git pull-request
+function createPullRequest(context) {
+  console.log("Creating Pull Request... in", context.directory);
 
+  var api = new GitApi({
+    username: context.username,
+    password: context.password
+  });
+
+  return api
+    .getRepo(context.user, context.repository)
+    .createPullRequest({
+      title: context.message,
+      base: context.to,
+      head: context.branch
+    })
+    .then(function(result) {
+      console.log(result);
+      return context;
+    });
+}
+
+
+function updateNPM(context) {
   return Promise
     .resolve(context)
+    .then(readNpmUpdates)
+    .then(updateNpmPackage)
+    .then(writeNpmPackage);
+}
+
+
+function makePR(context) {
+  return Promise
+    .resolve(context)
+    .then(configureOrigin)
     .then(createBranch)
     .then(addFiles)
     .then(commitChanges)
-    .then(pushBranch);
+    .then(pushBranch)
+    .then(createPullRequest);
 }
 
 
@@ -200,7 +266,7 @@ function execCommand(name, args, options) {
 
 
 module.exports = function exec(directories) {
-  return [resolveDirectory, checkGitStatus, readNpmUpdates, updateNpmPackage, writeNpmPackage, makePR]
+  return [ configure, checkGitStatus, updateNPM, makePR ]
     .reduce(function(deferred, action) {
       return deferred.then(function(results) {
         return Promise.all(results.filter(Boolean).map(action));
