@@ -1,0 +1,8 @@
+{
+  "username": "",
+  "password": "",
+  "remote": "origin",
+  "branch": "npm-dependency-updates",
+  "message": "Updating npm dependencies",
+  "to": "master"
+}
