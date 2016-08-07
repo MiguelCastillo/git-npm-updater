@@ -4,5 +4,7 @@
   "remote": "origin",
   "branch": "npm-dependency-updates",
   "message": "Updating npm dependencies",
+  "latest": false,
+  "dryrun": false,
   "to": "master"
 }

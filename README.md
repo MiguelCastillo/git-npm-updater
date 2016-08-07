@@ -13,11 +13,11 @@ Automatically update npm dependencies in your package.json and create Pull Reque
 
 --directories:
   List of local directories for which to make Pull Requests. Useful for specifying multiple local directories you want to make simultaneous Pull Requests for.
-  - Defaults to the current working directory.
+  - Defaults to the current working directory
 
 --remote:
   name of the git remote to use.
-  - Defaults to `origin`.
+  - Defaults to `origin`
 
 --branch:
   name of the git branch to commit changes to and make the Pull Request from.
@@ -29,7 +29,15 @@ Automatically update npm dependencies in your package.json and create Pull Reque
 
 --to:
   remote branch to merge the Pull Request into.
-  - Defaults to `master`.
+  - Defaults to `master`
+
+--latest:
+  by default, dependencies are updated following semver. Use this flag to update to the latest available versions.
+  - Defaults to `false`
+
+--dryrun:
+  flag to printout the updated package.json and the git information that would be used for the Pull Request.
+  - Defaults to `false`
 ```
 
 

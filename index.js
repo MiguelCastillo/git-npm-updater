@@ -40,16 +40,23 @@ function updateNpmPackage(context) {
 
   Object
     .keys(updates)
-    .filter(function(dependency) {
+    .map(function(dependency) {
       var update = updates[dependency];
-      return update.current !== update.latest;
+
+      return {
+        name: dependency,
+        version: context.latest ? update.latest : update.wanted
+      };
+    })
+    .filter(function(dependency) {
+      return updates[dependency.name].current !== dependency.version;
     })
     .forEach(function(dependency) {
-      var update = updates[dependency];
-      var version = packageFile[update.type][dependency];
+      var update = updates[dependency.name];
+      var version = packageFile[update.type][dependency.name];
 
       if (version) {
-        packageFile[update.type][dependency] = version.replace(/([^\d]*).*/, "$1" + update.wanted);
+        packageFile[update.type][dependency.name] = version.replace(/([^\d]*).*/, "$1" + dependency.version);
       }
     });
 
@@ -218,14 +225,19 @@ function updateNPM(context) {
     .resolve(context)
     .then(readNpmUpdates)
     .then(updateNpmPackage)
-    .then(writeNpmPackage);
+    .then(configureOrigin);
 }
 
 
 function makePR(context) {
+  if (context.dryrun) {
+    console.log(context);
+    return context;
+  }
+
   return Promise
     .resolve(context)
-    .then(configureOrigin)
+    .then(writeNpmPackage)
     .then(createBranch)
     .then(addFiles)
     .then(commitChanges)
