@@ -24,8 +24,12 @@ function configure(options) {
 function readNpmUpdates(context) {
   return execCommand("npm", ["outdated", "-l", "--json"], { cwd: context.directory, env: process.env }, "utf8")
     .then(function(updates) {
-        context.updates = JSON.parse(updates);
-        return context;
+      if (!updates) {
+        return Promise.reject(">> Dependencies are up to date");
+      }
+
+      context.updates = JSON.parse(updates);
+      return context;
     }, function(code) {
       console.error("Unable to execute `npm outdated` on " + directory + ". Process exited with code:", code);
     });
@@ -117,12 +121,38 @@ function checkGitStatus(context) {
   return execCommand("git", ["status", "--porcelain"], { cwd: context.directory, env: process.env })
     .then(function(status) {
       if (status) {
-        throw new Error("There are pending changes in '" + context.directory + "'. Please stash your changes first. " + status);
+        return Promise.reject(">> There are pending changes in '" + context.directory + "'. Please stash your changes first. " + status);
       }
 
       return context;
     }, function(err) {
       console.error("Unable to execute git status on " + context.directory);
+      throw new Error(err);
+    });
+}
+
+
+function checkBranch(context) {
+  console.log("Checking if branch exists", context.directory);
+
+  return execCommand("git", ["branch"], { cwd: context.directory, env: process.env })
+    .then(function(result) {
+      var branches = result
+        .split(" ")
+        .map(function(branchName) {
+          return branchName.replace(/[\s|\*]/g, "");
+        })
+        .filter(function(branchName) {
+          return branchName === context.branch;
+        });
+
+      if (branches.length) {
+        return Promise.reject(">> Branch '" + context.branch + "' already exists on " + context.directory);
+      }
+
+      return context;
+    }, function(err) {
+      console.error("Unable to execute git branch on " + context.directory);
       throw new Error(err);
     });
 }
@@ -134,7 +164,7 @@ function createBranch(context) {
   return execCommand("git", ["checkout", "-b", context.branch], { cwd: context.directory, env: process.env })
     .then(function(status) {
       if (!status) {
-        throw new Error("Unable to create branch. " + status);
+        return Promise.reject(">> Unable to create branch. " + status);
       }
 
       console.log(status);
@@ -152,7 +182,7 @@ function addFiles(context) {
   return execCommand("git", ["add", context.file], { cwd: context.directory, env: process.env })
     .then(function(status) {
       if (status) {
-        throw new Error("Unable to stage files for commit. " + status);
+        return Promise.reject(">> Unable to stage files for commit. " + status);
       }
 
       return context;
@@ -169,7 +199,7 @@ function commitChanges(context) {
   return execCommand("git", ["commit", "-m", context.message], { cwd: context.directory, env: process.env })
     .then(function(status) {
       if (!status) {
-        throw new Error("Unable to commit files. " + status);
+        return Promise.reject(">> Unable to commit files. " + status);
       }
 
       return context;
@@ -186,7 +216,7 @@ function pushBranch(context) {
   return execCommand("git", ["push", context.remote, context.branch], { cwd: context.directory, env: process.env })
     .then(function(status) {
       if (status) {
-        throw new Error("Unable to push branch. " + status);
+        return Promise.reject(">> Unable to push branch. " + status);
       }
 
       return context;
@@ -224,8 +254,7 @@ function updateNPM(context) {
   return Promise
     .resolve(context)
     .then(readNpmUpdates)
-    .then(updateNpmPackage)
-    .then(configureOrigin);
+    .then(updateNpmPackage);
 }
 
 
@@ -238,6 +267,7 @@ function makePR(context) {
   return Promise
     .resolve(context)
     .then(writeNpmPackage)
+    .then(configureOrigin)
     .then(createBranch)
     .then(addFiles)
     .then(commitChanges)
@@ -284,7 +314,7 @@ module.exports = function exec(directories, options) {
     }, options || {});
   });
 
-  return [ configure, checkGitStatus, updateNPM, makePR ]
+  return [ configure, checkGitStatus, checkBranch, updateNPM, makePR ]
     .reduce(function(deferred, action) {
       return deferred.then(function(results) {
         return Promise.all(results.filter(Boolean).map(action));
