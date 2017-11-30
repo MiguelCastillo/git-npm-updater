@@ -20,11 +20,11 @@
   },
   "homepage": "https://github.com/MiguelCastillo/git-npm-updater#readme",
   "dependencies": {
-    "github-api": "^2.3.0",
-    "json-format": "^0.1.2",
+    "github-api": "^3.0.0",
+    "json-format": "^1.0.1",
     "subarg": "^1.0.0"
   },
   "devDependencies": {
-    "eslint": "^3.2.0"
+    "eslint": "^4.12.1"
   }
 }
