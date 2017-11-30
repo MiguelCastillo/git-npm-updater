@@ -1,6 +1,7 @@
 # git-npm-updater
 
 [![Greenkeeper badge](https://badges.greenkeeper.io/MiguelCastillo/git-npm-updater.svg)](https://greenkeeper.io/)
+
 Automatically update npm dependencies in your package.json and create Pull Requests to your git repo.
 
 
