@@ -25,6 +25,6 @@
     "subarg": "^1.0.0"
   },
   "devDependencies": {
-    "eslint": "^4.12.1"
+    "eslint": "^5.15.2"
   }
 }
